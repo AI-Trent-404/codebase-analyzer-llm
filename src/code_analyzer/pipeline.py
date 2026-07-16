@@ -13,7 +13,6 @@ import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import List, Optional
 
 from rich.progress import (
     BarColumn,
@@ -79,8 +78,8 @@ class AnalysisPipeline:
             files=analyses,
         )
 
-    def _extract_all(self, files: List[SourceFile]) -> List[FileAnalysis]:
-        results: List[FileAnalysis] = []
+    def _extract_all(self, files: list[SourceFile]) -> list[FileAnalysis]:
+        results: list[FileAnalysis] = []
         columns = [
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
@@ -98,7 +97,7 @@ class AnalysisPipeline:
                     progress.advance(task)
         return results
 
-    def _safe_extract(self, sf: SourceFile) -> Optional[FileAnalysis]:
+    def _safe_extract(self, sf: SourceFile) -> FileAnalysis | None:
         try:
             return self.extractor.extract(sf)
         except Exception as exc:  # never let one bad file kill the whole run
@@ -106,7 +105,7 @@ class AnalysisPipeline:
             return None
 
     def _build_stats(
-        self, files: List[SourceFile], analyses: List[FileAnalysis], wall: float
+        self, files: list[SourceFile], analyses: list[FileAnalysis], wall: float
     ) -> RunStatistics:
         breakdown = language_breakdown(files)
         languages = [

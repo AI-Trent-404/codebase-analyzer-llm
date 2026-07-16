@@ -16,9 +16,9 @@ token and cost budgets.
 from __future__ import annotations
 
 import os
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, List, Optional
 
 from .config import Settings
 
@@ -37,8 +37,8 @@ class SourceFile:
     rel_path: str              # repo-relative path (stable identifier)
     language: str
     size_bytes: int
-    package: Optional[str] = None
-    _content: Optional[str] = field(default=None, repr=False)
+    package: str | None = None
+    _content: str | None = field(default=None, repr=False)
 
     def content(self) -> str:
         if self._content is None:
@@ -62,7 +62,7 @@ def _looks_like_test(rel_path: str) -> bool:
     )
 
 
-def _derive_package(rel_path: str, language: str) -> Optional[str]:
+def _derive_package(rel_path: str, language: str) -> str | None:
     """
     Best-effort logical package: for JVM languages under ``src/main/<lang>``,
     return the dotted package; otherwise the parent directory.
@@ -77,7 +77,7 @@ def _derive_package(rel_path: str, language: str) -> Optional[str]:
     return parent or None
 
 
-def discover(root: Path, settings: Settings) -> List[SourceFile]:
+def discover(root: Path, settings: Settings) -> list[SourceFile]:
     """Return the filtered, ordered list of source files to analyze."""
     root = root.resolve()
     exclude_dirs = set(settings.exclude_dirs)
@@ -86,7 +86,7 @@ def discover(root: Path, settings: Settings) -> List[SourceFile]:
         exclude_dirs.discard("tests")
 
     allowed_ext = set(settings.source_extensions)
-    found: List[SourceFile] = []
+    found: list[SourceFile] = []
 
     for dirpath, dirnames, filenames in os.walk(root):
         # Prune excluded directories in-place so os.walk never descends into them.

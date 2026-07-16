@@ -10,7 +10,6 @@ of truth, and keeps secrets (the API key) out of code and version control.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional
 
 import yaml
 from pydantic import Field
@@ -50,9 +49,9 @@ class Settings(BaseSettings):
     )
 
     # --- Secrets ---
-    anthropic_api_key: Optional[str] = Field(default=None, alias="ANTHROPIC_API_KEY")
+    anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
     # Optional: point at a proxy / reseller endpoint. Leave unset for official Anthropic.
-    anthropic_base_url: Optional[str] = Field(default=None, alias="ANTHROPIC_BASE_URL")
+    anthropic_base_url: str | None = Field(default=None, alias="ANTHROPIC_BASE_URL")
 
     # --- Model / LLM behaviour ---
     model: str = "claude-sonnet-4-20250514"
@@ -65,11 +64,11 @@ class Settings(BaseSettings):
     max_retries: int = 4
 
     # --- Ingestion ---
-    source_extensions: List[str] = Field(default_factory=lambda: list(DEFAULT_SOURCE_EXTENSIONS))
-    exclude_dirs: List[str] = Field(default_factory=lambda: list(DEFAULT_EXCLUDE_DIRS))
+    source_extensions: list[str] = Field(default_factory=lambda: list(DEFAULT_SOURCE_EXTENSIONS))
+    exclude_dirs: list[str] = Field(default_factory=lambda: list(DEFAULT_EXCLUDE_DIRS))
     include_tests: bool = False
     max_file_bytes: int = 400_000  # skip vendored blobs / generated giants
-    max_files: Optional[int] = None  # cap for quick/cheap runs
+    max_files: int | None = None  # cap for quick/cheap runs
 
     # --- Chunking ---
     chunk_token_budget: int = 12_000  # per-file input budget before we split
@@ -85,11 +84,14 @@ class Settings(BaseSettings):
     # --- Modes ---
     dry_run: bool = False  # run the full pipeline with a heuristic stand-in (no API key)
 
+    # --- Security ---
+    redact_secrets: bool = True  # scrub credentials from code before sending to the LLM
+
     def pricing(self) -> dict:
         return MODEL_PRICING.get(self.model, {"input": 3.00, "output": 15.00})
 
     @classmethod
-    def load(cls, config_file: Optional[Path] = None, **overrides) -> "Settings":
+    def load(cls, config_file: Path | None = None, **overrides) -> Settings:
         """
         Build settings from (optional) YAML file + env + explicit overrides.
 

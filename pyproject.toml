@@ -38,3 +38,14 @@ where = ["src"]
 pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
+# E501: line length handled by the formatter.
+# B008: Typer's Option()/Argument() defaults are the framework's intended pattern.
+ignore = ["E501", "B008"]

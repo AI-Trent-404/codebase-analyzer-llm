@@ -21,7 +21,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -53,14 +52,14 @@ class MethodInfo(BaseModel):
         ...,
         description="One or two sentences on what the method does and why it exists.",
     )
-    parameters: List[str] = Field(
+    parameters: list[str] = Field(
         default_factory=list,
         description="Parameter declarations, e.g. ['Integer filmId', 'Pageable pageable'].",
     )
-    returns: Optional[str] = Field(
+    returns: str | None = Field(
         None, description="Return type and a short note on what is returned."
     )
-    visibility: Optional[str] = Field(
+    visibility: str | None = Field(
         None, description="Access modifier if applicable (public/private/protected/package)."
     )
 
@@ -83,17 +82,17 @@ class LLMFileInsight(BaseModel):
         description="Architectural role, e.g. 'REST controller', 'JPA entity', "
         "'service implementation', 'MapStruct mapper', 'configuration'.",
     )
-    key_methods: List[MethodInfo] = Field(
+    key_methods: list[MethodInfo] = Field(
         default_factory=list,
         description="The most important methods. Omit trivial getters/setters and "
         "Lombok-generated accessors.",
     )
-    external_dependencies: List[str] = Field(
+    external_dependencies: list[str] = Field(
         default_factory=list,
         description="Notable frameworks/libraries this file leans on "
         "(e.g. 'Spring HATEOAS', 'QueryDSL', 'MapStruct').",
     )
-    noteworthy: List[str] = Field(
+    noteworthy: list[str] = Field(
         default_factory=list,
         description="Design patterns, security annotations, gotchas, or anything a "
         "reviewer should know.",
@@ -111,7 +110,7 @@ class ComplexityMetrics(BaseModel):
     max_cyclomatic_complexity: int = Field(
         0, description="Highest cyclomatic complexity of any single function."
     )
-    most_complex_function: Optional[str] = Field(
+    most_complex_function: str | None = Field(
         None, description="Name of the function with the highest complexity."
     )
     band: ComplexityBand = Field(
@@ -124,7 +123,7 @@ class FileAnalysis(BaseModel):
 
     path: str = Field(..., description="Repo-relative path of the file.")
     language: str = Field(..., description="Detected source language.")
-    package: Optional[str] = Field(
+    package: str | None = Field(
         None, description="Logical package/module the file belongs to."
     )
     size_bytes: int = Field(0, description="File size in bytes.")
@@ -149,22 +148,22 @@ class ProjectOverview(BaseModel):
         ..., description="How the code is organized and the main architectural style."
     )
     primary_language: str = Field(..., description="Dominant programming language.")
-    frameworks: List[str] = Field(
+    frameworks: list[str] = Field(
         default_factory=list, description="Major frameworks and libraries in use."
     )
-    key_components: List[str] = Field(
+    key_components: list[str] = Field(
         default_factory=list,
         description="The most important modules/packages and what each does.",
     )
-    entry_points: List[str] = Field(
+    entry_points: list[str] = Field(
         default_factory=list,
         description="Application entry points (main class, controllers, etc.).",
     )
-    notable_patterns: List[str] = Field(
+    notable_patterns: list[str] = Field(
         default_factory=list,
         description="Cross-cutting design patterns and conventions observed.",
     )
-    potential_risks: List[str] = Field(
+    potential_risks: list[str] = Field(
         default_factory=list,
         description="Complexity hotspots, coupling, or maintenance risks worth flagging.",
     )
@@ -187,7 +186,7 @@ class RunStatistics(BaseModel):
     files_skipped: int = 0
     files_from_cache: int = 0
     total_source_lines: int = 0
-    languages: List[LanguageStat] = Field(default_factory=list)
+    languages: list[LanguageStat] = Field(default_factory=list)
     llm_calls: int = 0
     prompt_tokens: int = 0
     completion_tokens: int = 0
@@ -213,7 +212,7 @@ class CodebaseAnalysis(BaseModel):
     metadata: AnalysisMetadata
     overview: ProjectOverview
     statistics: RunStatistics
-    files: List[FileAnalysis]
+    files: list[FileAnalysis]
 
     def to_json(self, indent: int = 2) -> str:
         return self.model_dump_json(indent=indent)

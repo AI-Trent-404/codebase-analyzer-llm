@@ -1,5 +1,7 @@
 # Codebase Analysis using an LLM
 
+[![CI](https://github.com/AI-Trent-404/codebase-analyzer-llm/actions/workflows/ci.yml/badge.svg)](https://github.com/AI-Trent-404/codebase-analyzer-llm/actions/workflows/ci.yml)
+
 A program that reads an arbitrary codebase, feeds it to a Large Language Model in a
 token-budget-aware way, and emits **structured, machine-readable JSON** describing the
 project: a high-level overview, per-file method signatures and descriptions, complexity
@@ -8,6 +10,10 @@ metrics, and noteworthy design aspects.
 Built with **LangChain + Anthropic Claude** and validated end-to-end against the
 assignment's target repository, [`codejsha/spring-rest-sakila`](https://github.com/codejsha/spring-rest-sakila)
 (188 Java files, ~10k LOC).
+
+**Further reading:** [reference architecture](docs/ARCHITECTURE.md) ·
+[architecture decisions (ADRs)](docs/adr/) · [security & data governance](SECURITY.md) ·
+[scaling & productionization](docs/SCALING.md) · [evaluation strategy](docs/EVALUATION.md)
 
 ---
 
@@ -33,6 +39,85 @@ assignment's target repository, [`codejsha/spring-rest-sakila`](https://github.c
   per-package summaries first if the repo is too large to fit one prompt.
 - The final object is **re-validated against the Pydantic schema** and written to JSON.
 
+### Reference architecture
+
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': {'edgeLabelBackground':'#ffffff', 'lineColor':'#64748b'}}}%%
+flowchart TB
+    U["Developer runs:<br/>code-analyzer analyze"]:::user
+
+    subgraph APP["code-analyzer application"]
+      direction TB
+      CLI["Interface Layer<br/>Typer CLI - cli.py"]:::layer
+      CFG["Configuration - layered<br/>config.py + .env<br/>CLI &gt; env &gt; YAML &gt; defaults"]:::layer
+
+      subgraph ING["Ingestion"]
+        LOC["Locate / clone repo"]:::comp
+        FILT["Discover &amp; filter sources<br/>ingestion.py"]:::comp
+      end
+
+      subgraph CORE["Analysis Core - orchestrated by pipeline.py"]
+        BUD["Token budgeting &amp; chunking<br/>tokens.py"]:::comp
+        subgraph MAP["MAP - per file, concurrent"]
+          EX["FileExtractor<br/>extractors.py"]:::comp
+          LZ["Deterministic metrics<br/>complexity.py + lizard"]:::comp
+        end
+        RED["REDUCE - overview synthesis<br/>aggregator.py"]:::comp
+        CA[("Content-addressed cache<br/>cache.py")]:::store
+      end
+
+      subgraph LLMI["LLM Integration - llm.py"]
+        CHAT["LangChain ChatAnthropic"]:::comp
+        STR["Structured output<br/>schema-bound tool call"]:::comp
+        RSU["Retries, backoff,<br/>token &amp; cost tracking"]:::comp
+      end
+
+      subgraph OUT["Output &amp; Validation"]
+        MOD["Pydantic schema<br/>models.py"]:::comp
+        OUTJ[("analysis.json")]:::store
+      end
+    end
+
+    subgraph EXT["External Systems"]
+      GIT[("Git remote<br/>target codebase")]:::ext
+      API["Claude API<br/>Anthropic or compatible proxy"]:::ext
+    end
+
+    U --> CLI
+    CLI --> CFG
+    CLI --> LOC
+    LOC -->|git clone| GIT
+    LOC --> FILT --> BUD --> EX
+    LZ --> EX
+    EX <-->|hit / store| CA
+    EX --> CHAT
+    RED --> CHAT
+    CHAT --> STR
+    CHAT -->|HTTPS| API
+    EX --> RED
+    RED --> MOD --> OUTJ
+    STR -.->|validates against| MOD
+    CFG -.-> ING
+    CFG -.-> LLMI
+
+    style APP fill:#eaf4fd,stroke:#60a5fa,color:#0f172a
+    style ING fill:#ffffff,stroke:#93c5fd,color:#0f172a
+    style CORE fill:#ffffff,stroke:#93c5fd,color:#0f172a
+    style MAP fill:#eaf4fd,stroke:#93c5fd,color:#0f172a
+    style LLMI fill:#ffffff,stroke:#93c5fd,color:#0f172a
+    style OUT fill:#ffffff,stroke:#93c5fd,color:#0f172a
+    style EXT fill:#eaf4fd,stroke:#60a5fa,color:#0f172a
+
+    classDef user fill:#3b0764,stroke:#a855f7,color:#f3e8ff;
+    classDef layer fill:#0f172a,stroke:#475569,color:#e2e8f0;
+    classDef comp fill:#172554,stroke:#3b82f6,color:#dbeafe;
+    classDef store fill:#064e3b,stroke:#10b981,color:#d1fae5;
+    classDef ext fill:#1f2937,stroke:#9ca3af,color:#e5e7eb;
+```
+
+See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for the component-by-component breakdown,
+runtime data flow, and cross-cutting concerns.
+
 ---
 
 ## 2. Quick start
@@ -45,22 +130,25 @@ assignment's target repository, [`codejsha/spring-rest-sakila`](https://github.c
 ### Install
 ```bash
 cd codebase-analyzer
-python -m venv .venv && source .venv/bin/activate    # optional but recommended
+python -m venv .venv && source .venv/bin/activate    # recommended
 pip install -r requirements.txt
-pip install -e .        # registers the `code-analyzer` command
+pip install -e .        # registers the `code-analyzer` command (and enables `python -m code_analyzer`)
 ```
 
 ### Configure your key
 ```bash
 cp .env.example .env
-# edit .env and set ANTHROPIC_API_KEY=sk-ant-...
 ```
+Then edit `.env`:
+- `ANTHROPIC_API_KEY=...` — required.
+- **Using the official Anthropic API?** That's all you need; the default model is a Claude Sonnet.
+- **Using an OpenAI-compatible proxy / reseller endpoint?** Also set `ANTHROPIC_BASE_URL=` to the endpoint they gave you, and `ANALYZER_MODEL=` to a model id that endpoint accepts.
 
 ### Run it — three ways
 
 ```bash
 # A) Clone the target repo and analyze in one step (real LLM):
-python -m code_analyzer analyze \
+code-analyzer analyze \
     --repo-url https://github.com/codejsha/spring-rest-sakila \
     --out out/analysis.json
 
@@ -137,6 +225,7 @@ for downstream consumers. `python -m code_analyzer schema` emits the JSON Schema
 | **Performance** | Concurrent per-file analysis via a thread pool (I/O-bound calls). |
 | **Idempotency / cost control** | Content-addressed cache keyed on `content + model + prompt version`. |
 | **Determinism** | `temperature=0`, sorted file ordering, stable output. |
+| **Security** | Secrets are redacted from code before egress to the model (`redaction.py`); see [SECURITY.md](SECURITY.md). |
 | **Configuration** | Layered config: CLI > env (`ANALYZER_*`) > YAML > defaults; secrets via `.env`. |
 | **Testability** | Deterministic components unit-tested; `--dry-run` runs the pipeline offline. |
 | **Separation of concerns** | Ingestion / chunking / LLM / extraction / aggregation / CLI are independent modules. |
@@ -223,6 +312,7 @@ Any of these can be set via CLI flag, `ANALYZER_*` env var, or a `--config` YAML
 | `include_tests` | `false` | Analyze test sources too. |
 | `max_files` | `null` | Cap files for a cheap run. |
 | `cache_enabled` | `true` | Content-addressed caching. |
+| `redact_secrets` | `true` | Scrub credentials from code before sending to the LLM. |
 
 ---
 

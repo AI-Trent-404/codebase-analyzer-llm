@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from typing import List
 
 from . import prompts
 from .config import Settings
@@ -28,7 +27,7 @@ def _digest_line(fa: FileAnalysis) -> str:
     return f"[{fa.insight.role}] {fa.path} — {fa.insight.summary}"
 
 
-def _package_tree(files: List[FileAnalysis]) -> str:
+def _package_tree(files: list[FileAnalysis]) -> str:
     counts: dict[str, int] = defaultdict(int)
     for fa in files:
         counts[fa.package or "(root)"] += 1
@@ -41,7 +40,7 @@ class OverviewAggregator:
         self.client = client
         self.settings = settings
 
-    def build(self, target: str, files: List[FileAnalysis]) -> ProjectOverview:
+    def build(self, target: str, files: list[FileAnalysis]) -> ProjectOverview:
         tree = _package_tree(files)
         digests = [_digest_line(fa) for fa in files]
         combined = "\n".join(digests)
@@ -58,13 +57,13 @@ class OverviewAggregator:
             prompts.overview_user_prompt(target, tree, combined),
         )
 
-    def _hierarchical_digest(self, files: List[FileAnalysis], budget: int) -> str:
+    def _hierarchical_digest(self, files: list[FileAnalysis], budget: int) -> str:
         """Collapse files into per-package digests until the whole thing fits."""
-        by_pkg: dict[str, List[FileAnalysis]] = defaultdict(list)
+        by_pkg: dict[str, list[FileAnalysis]] = defaultdict(list)
         for fa in files:
             by_pkg[fa.package or "(root)"].append(fa)
 
-        package_summaries: List[str] = []
+        package_summaries: list[str] = []
         for pkg, pkg_files in sorted(by_pkg.items()):
             pkg_digest = "\n".join(_digest_line(fa) for fa in pkg_files)
             summary = self.client.structured(

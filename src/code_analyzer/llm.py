@@ -14,7 +14,7 @@ pipeline is provider-agnostic and easily testable. Responsibilities:
 from __future__ import annotations
 
 import threading
-from typing import Type, TypeVar
+from typing import TypeVar
 
 from pydantic import BaseModel
 from tenacity import (
@@ -86,7 +86,7 @@ class LLMClient:
             kwargs["base_url"] = settings.anthropic_base_url
         return ChatAnthropic(**kwargs)
 
-    def structured(self, schema: Type[T], system: str, user: str) -> T:
+    def structured(self, schema: type[T], system: str, user: str) -> T:
         """
         Invoke the model and return an instance of ``schema``.
 

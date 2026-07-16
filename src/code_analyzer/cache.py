@@ -13,9 +13,7 @@ LLM wastes money and time. We key each cached result on a hash of
 from __future__ import annotations
 
 import hashlib
-import json
 from pathlib import Path
-from typing import Optional
 
 from .models import LLMFileInsight
 
@@ -40,7 +38,7 @@ class InsightCache:
         if self.enabled:
             self.dir.mkdir(parents=True, exist_ok=True)
 
-    def get(self, content: str, model: str) -> Optional[LLMFileInsight]:
+    def get(self, content: str, model: str) -> LLMFileInsight | None:
         if not self.enabled:
             return None
         path = self.dir / f"{_key(content, model)}.json"

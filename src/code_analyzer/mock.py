@@ -13,7 +13,7 @@ a drop-in replacement inside the pipeline.
 from __future__ import annotations
 
 import re
-from typing import Type, TypeVar
+from typing import TypeVar
 
 from pydantic import BaseModel
 
@@ -69,7 +69,7 @@ class MockLLMClient:
         self.settings = settings
         self.usage = UsageTracker(0.0, 0.0)  # cost is always zero in dry-run
 
-    def structured(self, schema: Type[T], system: str, user: str) -> T:
+    def structured(self, schema: type[T], system: str, user: str) -> T:
         self.usage.record(0, 0)
         if schema is LLMFileInsight:
             return self._file_insight(user)  # type: ignore[return-value]

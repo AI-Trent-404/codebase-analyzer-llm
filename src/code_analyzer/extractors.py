@@ -17,6 +17,7 @@ from .config import Settings
 from .ingestion import SourceFile
 from .llm import LLMClient
 from .models import FileAnalysis, LLMFileInsight, MethodInfo
+from .redaction import redact
 from .tokens import split_to_budget
 
 log = logging.getLogger("code_analyzer.extract")
@@ -60,20 +61,31 @@ class FileExtractor:
 
     def extract(self, sf: SourceFile) -> FileAnalysis:
         code = sf.content()
-        complexity = analyze_source(sf.rel_path, code)  # deterministic, no tokens
+        complexity = analyze_source(sf.rel_path, code)  # deterministic, on ORIGINAL, no tokens
 
         cached = self.cache.get(code, self.settings.model)
         if cached is not None:
             return self._assemble(sf, cached, complexity, chunked=False, cached=True)
 
-        chunks = split_to_budget(code, self.settings.chunk_token_budget)
+        # Scrub secrets before anything is transmitted to the model endpoint.
+        send_code = code
+        if self.settings.redact_secrets:
+            result = redact(code)
+            send_code = result.text
+            if result.count:
+                log.info(
+                    "Redacted %d secret(s) from %s before sending to the model",
+                    result.count, sf.rel_path,
+                )
+
+        chunks = split_to_budget(send_code, self.settings.chunk_token_budget)
         chunked = len(chunks) > 1
 
         if not chunked:
             insight = self.client.structured(
                 LLMFileInsight,
                 prompts.FILE_SYSTEM,
-                prompts.file_user_prompt(sf.rel_path, sf.language, code),
+                prompts.file_user_prompt(sf.rel_path, sf.language, send_code),
             )
         else:
             log.info("Splitting %s into %d chunks (token budget)", sf.rel_path, len(chunks))

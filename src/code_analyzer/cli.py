@@ -15,10 +15,8 @@ Examples
 from __future__ import annotations
 
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 import typer
 from dotenv import load_dotenv
@@ -64,13 +62,13 @@ def _render_summary(analysis: CodebaseAnalysis) -> None:
 
 @app.command()
 def analyze(
-    repo: Optional[Path] = typer.Option(None, help="Path to a local codebase to analyze."),
-    repo_url: Optional[str] = typer.Option(None, help="Git URL to clone, then analyze."),
+    repo: Path | None = typer.Option(None, help="Path to a local codebase to analyze."),
+    repo_url: str | None = typer.Option(None, help="Git URL to clone, then analyze."),
     out: Path = typer.Option(Path("out/analysis.json"), help="Output JSON path."),
-    config: Optional[Path] = typer.Option(None, help="Optional YAML config file."),
-    model: Optional[str] = typer.Option(None, help="Override the Claude model id."),
-    max_files: Optional[int] = typer.Option(None, help="Analyze at most N files (cheap runs)."),
-    max_concurrency: Optional[int] = typer.Option(None, help="Parallel LLM calls."),
+    config: Path | None = typer.Option(None, help="Optional YAML config file."),
+    model: str | None = typer.Option(None, help="Override the Claude model id."),
+    max_files: int | None = typer.Option(None, help="Analyze at most N files (cheap runs)."),
+    max_concurrency: int | None = typer.Option(None, help="Parallel LLM calls."),
     include_tests: bool = typer.Option(False, help="Include test sources."),
     no_cache: bool = typer.Option(False, help="Disable the content-hash cache."),
     dry_run: bool = typer.Option(False, help="Run with a heuristic stand-in; no API key needed."),
@@ -93,7 +91,7 @@ def analyze(
     settings = Settings.load(config_file=config, **overrides)
 
     # Resolve the codebase location (local path or freshly cloned).
-    tmp_dir: Optional[tempfile.TemporaryDirectory] = None
+    tmp_dir: tempfile.TemporaryDirectory | None = None
     if repo_url:
         tmp_dir = tempfile.TemporaryDirectory(prefix="analyzer_")
         root = _clone(repo_url, Path(tmp_dir.name) / "repo")
@@ -114,7 +112,7 @@ def analyze(
         analysis = pipeline.run(root, target_label)
     except Exception as exc:
         logger.error("Analysis failed: %s", exc)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from exc
     finally:
         if tmp_dir is not None:
             tmp_dir.cleanup()
@@ -126,7 +124,7 @@ def analyze(
 
 
 @app.command()
-def schema(out: Optional[Path] = typer.Option(None, help="Write JSON Schema here.")) -> None:
+def schema(out: Path | None = typer.Option(None, help="Write JSON Schema here.")) -> None:
     """Emit the JSON Schema of the output contract (for consumers/validators)."""
     import json
 
