@@ -7,6 +7,7 @@ production-grade. It complements the [README](../README.md), which covers usage.
 ## System diagram
 
 ```mermaid
+%%{init: {'theme':'base', 'themeVariables': {'edgeLabelBackground':'#ffffff', 'lineColor':'#64748b'}}}%%
 flowchart TB
     U["Developer runs:<br/>code-analyzer analyze"]:::user
 
@@ -63,6 +64,14 @@ flowchart TB
     STR -.->|validates against| MOD
     CFG -.-> ING
     CFG -.-> LLMI
+
+    style APP fill:#eaf4fd,stroke:#60a5fa,color:#0f172a
+    style ING fill:#ffffff,stroke:#93c5fd,color:#0f172a
+    style CORE fill:#ffffff,stroke:#93c5fd,color:#0f172a
+    style MAP fill:#eaf4fd,stroke:#93c5fd,color:#0f172a
+    style LLMI fill:#ffffff,stroke:#93c5fd,color:#0f172a
+    style OUT fill:#ffffff,stroke:#93c5fd,color:#0f172a
+    style EXT fill:#eaf4fd,stroke:#60a5fa,color:#0f172a
 
     classDef user fill:#3b0764,stroke:#a855f7,color:#f3e8ff;
     classDef layer fill:#0f172a,stroke:#475569,color:#e2e8f0;
