@@ -79,7 +79,9 @@ class OverviewAggregator:
 
         combined = "\n".join(package_summaries)
         # In the (rare) event package-level is still too big, truncate defensively.
+        # Halve toward a floor of 1 so this always terminates, even if the budget
+        # can never be met (e.g. a pathologically small max_input_tokens).
         while count_tokens(combined) > budget and len(package_summaries) > 1:
-            package_summaries = package_summaries[: len(package_summaries) // 2 + 1]
+            package_summaries = package_summaries[: max(1, len(package_summaries) // 2)]
             combined = "\n".join(package_summaries) + "\n… (truncated for token budget)"
         return combined

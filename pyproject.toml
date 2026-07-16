@@ -39,6 +39,14 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = "-q"
 
+[tool.coverage.run]
+source = ["code_analyzer"]
+omit = ["*/__main__.py", "*/logging_setup.py"]
+
+[tool.coverage.report]
+show_missing = true
+precision = 1
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"
