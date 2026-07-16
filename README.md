@@ -1,6 +1,7 @@
 # Codebase Analysis using an LLM
 
 [![CI](https://github.com/AI-Trent-404/codebase-analyzer-llm/actions/workflows/ci.yml/badge.svg)](https://github.com/AI-Trent-404/codebase-analyzer-llm/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/AI-Trent-404/codebase-analyzer-llm/branch/main/graph/badge.svg)](https://codecov.io/gh/AI-Trent-404/codebase-analyzer-llm)
 
 A program that reads an arbitrary codebase, feeds it to a Large Language Model in a
 token-budget-aware way, and emits **structured, machine-readable JSON** describing the
