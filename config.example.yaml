@@ -1,0 +1,22 @@
+# Example configuration. Copy to config.yaml and pass with `--config config.yaml`.
+# Every value here can also be set via ANALYZER_* env vars or CLI flags.
+
+model: claude-sonnet-4-20250514
+temperature: 0.0
+max_output_tokens: 4096
+max_input_tokens: 150000
+
+max_concurrency: 6
+max_retries: 4
+
+include_tests: false
+max_file_bytes: 400000
+# max_files: 25            # uncomment to cap files for a cheap run
+
+chunk_token_budget: 12000
+
+cache_enabled: true
+cache_dir: .analyzer_cache
+
+output_path: out/analysis.json
+log_level: INFO

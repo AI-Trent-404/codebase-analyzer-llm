@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "code-analyzer"
+version = "1.0.0"
+description = "Analyze a codebase with an LLM and emit structured, machine-readable knowledge as JSON."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Trenton" }]
+dependencies = [
+    "langchain>=0.3.0",
+    "langchain-anthropic>=0.3.0",
+    "langchain-core>=0.3.0",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "python-dotenv>=1.0",
+    "PyYAML>=6.0",
+    "typer>=0.12",
+    "rich>=13.7",
+    "tenacity>=8.3",
+    "lizard>=1.17",
+]
+
+[project.optional-dependencies]
+tokens = ["tiktoken>=0.7"]
+dev = ["pytest>=8.2", "pytest-cov>=5.0"]
+
+[project.scripts]
+code-analyzer = "code_analyzer.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"

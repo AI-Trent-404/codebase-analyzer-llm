@@ -1,0 +1,450 @@
+{
+  "$defs": {
+    "AnalysisMetadata": {
+      "properties": {
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "generated_at": {
+          "title": "Generated At",
+          "type": "string"
+        },
+        "target": {
+          "description": "Path or URL of the analyzed codebase.",
+          "title": "Target",
+          "type": "string"
+        },
+        "model": {
+          "description": "LLM used for comprehension.",
+          "title": "Model",
+          "type": "string"
+        },
+        "tool_version": {
+          "default": "1.0.0",
+          "title": "Tool Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target",
+        "model"
+      ],
+      "title": "AnalysisMetadata",
+      "type": "object"
+    },
+    "ComplexityBand": {
+      "description": "Human-readable bucket for cyclomatic complexity.",
+      "enum": [
+        "low",
+        "moderate",
+        "high",
+        "very_high"
+      ],
+      "title": "ComplexityBand",
+      "type": "string"
+    },
+    "ComplexityMetrics": {
+      "description": "Deterministic metrics computed by a static analyzer (lizard), not the LLM.",
+      "properties": {
+        "nloc": {
+          "default": 0,
+          "description": "Non-comment lines of code.",
+          "title": "Nloc",
+          "type": "integer"
+        },
+        "function_count": {
+          "default": 0,
+          "description": "Number of functions/methods detected.",
+          "title": "Function Count",
+          "type": "integer"
+        },
+        "average_cyclomatic_complexity": {
+          "default": 0.0,
+          "description": "Mean cyclomatic complexity across functions.",
+          "title": "Average Cyclomatic Complexity",
+          "type": "number"
+        },
+        "max_cyclomatic_complexity": {
+          "default": 0,
+          "description": "Highest cyclomatic complexity of any single function.",
+          "title": "Max Cyclomatic Complexity",
+          "type": "integer"
+        },
+        "most_complex_function": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Name of the function with the highest complexity.",
+          "title": "Most Complex Function"
+        },
+        "band": {
+          "$ref": "#/$defs/ComplexityBand",
+          "default": "low",
+          "description": "Bucketed complexity for quick scanning."
+        }
+      },
+      "title": "ComplexityMetrics",
+      "type": "object"
+    },
+    "FileAnalysis": {
+      "description": "Complete per-file record: deterministic metrics + LLM insight, merged.",
+      "properties": {
+        "path": {
+          "description": "Repo-relative path of the file.",
+          "title": "Path",
+          "type": "string"
+        },
+        "language": {
+          "description": "Detected source language.",
+          "title": "Language",
+          "type": "string"
+        },
+        "package": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Logical package/module the file belongs to.",
+          "title": "Package"
+        },
+        "size_bytes": {
+          "default": 0,
+          "description": "File size in bytes.",
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "complexity": {
+          "$ref": "#/$defs/ComplexityMetrics"
+        },
+        "insight": {
+          "$ref": "#/$defs/LLMFileInsight"
+        },
+        "analyzed_with_chunking": {
+          "default": false,
+          "description": "True if the file was split to respect token limits.",
+          "title": "Analyzed With Chunking",
+          "type": "boolean"
+        },
+        "from_cache": {
+          "default": false,
+          "description": "True if this record was served from the content-hash cache.",
+          "title": "From Cache",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path",
+        "language",
+        "insight"
+      ],
+      "title": "FileAnalysis",
+      "type": "object"
+    },
+    "LLMFileInsight": {
+      "description": "The portion of a file's analysis that the LLM is responsible for.\n\nThis is the exact schema bound to Claude via ``with_structured_output`` \u2014 it\nintentionally excludes anything we can compute deterministically (line counts,\ncyclomatic complexity), so we never pay tokens for facts a static analyzer\nalready knows.",
+      "properties": {
+        "summary": {
+          "description": "A concise, high-signal summary of the file's responsibility.",
+          "title": "Summary",
+          "type": "string"
+        },
+        "role": {
+          "description": "Architectural role, e.g. 'REST controller', 'JPA entity', 'service implementation', 'MapStruct mapper', 'configuration'.",
+          "title": "Role",
+          "type": "string"
+        },
+        "key_methods": {
+          "description": "The most important methods. Omit trivial getters/setters and Lombok-generated accessors.",
+          "items": {
+            "$ref": "#/$defs/MethodInfo"
+          },
+          "title": "Key Methods",
+          "type": "array"
+        },
+        "external_dependencies": {
+          "description": "Notable frameworks/libraries this file leans on (e.g. 'Spring HATEOAS', 'QueryDSL', 'MapStruct').",
+          "items": {
+            "type": "string"
+          },
+          "title": "External Dependencies",
+          "type": "array"
+        },
+        "noteworthy": {
+          "description": "Design patterns, security annotations, gotchas, or anything a reviewer should know.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Noteworthy",
+          "type": "array"
+        }
+      },
+      "required": [
+        "summary",
+        "role"
+      ],
+      "title": "LLMFileInsight",
+      "type": "object"
+    },
+    "LanguageStat": {
+      "properties": {
+        "language": {
+          "title": "Language",
+          "type": "string"
+        },
+        "file_count": {
+          "title": "File Count",
+          "type": "integer"
+        },
+        "line_count": {
+          "title": "Line Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "language",
+        "file_count",
+        "line_count"
+      ],
+      "title": "LanguageStat",
+      "type": "object"
+    },
+    "MethodInfo": {
+      "description": "A single method / function of interest within a source file.",
+      "properties": {
+        "name": {
+          "description": "Method or function name.",
+          "title": "Name",
+          "type": "string"
+        },
+        "signature": {
+          "description": "Full signature including modifiers, return type, name, and parameter list, e.g. 'public ResponseEntity<FilmDto> getFilm(Integer id)'.",
+          "title": "Signature",
+          "type": "string"
+        },
+        "description": {
+          "description": "One or two sentences on what the method does and why it exists.",
+          "title": "Description",
+          "type": "string"
+        },
+        "parameters": {
+          "description": "Parameter declarations, e.g. ['Integer filmId', 'Pageable pageable'].",
+          "items": {
+            "type": "string"
+          },
+          "title": "Parameters",
+          "type": "array"
+        },
+        "returns": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Return type and a short note on what is returned.",
+          "title": "Returns"
+        },
+        "visibility": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Access modifier if applicable (public/private/protected/package).",
+          "title": "Visibility"
+        }
+      },
+      "required": [
+        "name",
+        "signature",
+        "description"
+      ],
+      "title": "MethodInfo",
+      "type": "object"
+    },
+    "ProjectOverview": {
+      "description": "The 'reduce' step: a synthesized, high-level view of the whole project.",
+      "properties": {
+        "name": {
+          "description": "Best-guess project name.",
+          "title": "Name",
+          "type": "string"
+        },
+        "purpose": {
+          "description": "What the project is for, in plain language (2-4 sentences).",
+          "title": "Purpose",
+          "type": "string"
+        },
+        "architecture_summary": {
+          "description": "How the code is organized and the main architectural style.",
+          "title": "Architecture Summary",
+          "type": "string"
+        },
+        "primary_language": {
+          "description": "Dominant programming language.",
+          "title": "Primary Language",
+          "type": "string"
+        },
+        "frameworks": {
+          "description": "Major frameworks and libraries in use.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Frameworks",
+          "type": "array"
+        },
+        "key_components": {
+          "description": "The most important modules/packages and what each does.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Key Components",
+          "type": "array"
+        },
+        "entry_points": {
+          "description": "Application entry points (main class, controllers, etc.).",
+          "items": {
+            "type": "string"
+          },
+          "title": "Entry Points",
+          "type": "array"
+        },
+        "notable_patterns": {
+          "description": "Cross-cutting design patterns and conventions observed.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Notable Patterns",
+          "type": "array"
+        },
+        "potential_risks": {
+          "description": "Complexity hotspots, coupling, or maintenance risks worth flagging.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Potential Risks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "purpose",
+        "architecture_summary",
+        "primary_language"
+      ],
+      "title": "ProjectOverview",
+      "type": "object"
+    },
+    "RunStatistics": {
+      "description": "Operational metadata \u2014 useful for cost review and reproducibility.",
+      "properties": {
+        "files_discovered": {
+          "default": 0,
+          "title": "Files Discovered",
+          "type": "integer"
+        },
+        "files_analyzed": {
+          "default": 0,
+          "title": "Files Analyzed",
+          "type": "integer"
+        },
+        "files_skipped": {
+          "default": 0,
+          "title": "Files Skipped",
+          "type": "integer"
+        },
+        "files_from_cache": {
+          "default": 0,
+          "title": "Files From Cache",
+          "type": "integer"
+        },
+        "total_source_lines": {
+          "default": 0,
+          "title": "Total Source Lines",
+          "type": "integer"
+        },
+        "languages": {
+          "items": {
+            "$ref": "#/$defs/LanguageStat"
+          },
+          "title": "Languages",
+          "type": "array"
+        },
+        "llm_calls": {
+          "default": 0,
+          "title": "Llm Calls",
+          "type": "integer"
+        },
+        "prompt_tokens": {
+          "default": 0,
+          "title": "Prompt Tokens",
+          "type": "integer"
+        },
+        "completion_tokens": {
+          "default": 0,
+          "title": "Completion Tokens",
+          "type": "integer"
+        },
+        "estimated_cost_usd": {
+          "default": 0.0,
+          "title": "Estimated Cost Usd",
+          "type": "number"
+        },
+        "wall_time_seconds": {
+          "default": 0.0,
+          "title": "Wall Time Seconds",
+          "type": "number"
+        }
+      },
+      "title": "RunStatistics",
+      "type": "object"
+    }
+  },
+  "description": "Top-level deliverable. This is what gets serialized to the output JSON file.",
+  "properties": {
+    "metadata": {
+      "$ref": "#/$defs/AnalysisMetadata"
+    },
+    "overview": {
+      "$ref": "#/$defs/ProjectOverview"
+    },
+    "statistics": {
+      "$ref": "#/$defs/RunStatistics"
+    },
+    "files": {
+      "items": {
+        "$ref": "#/$defs/FileAnalysis"
+      },
+      "title": "Files",
+      "type": "array"
+    }
+  },
+  "required": [
+    "metadata",
+    "overview",
+    "statistics",
+    "files"
+  ],
+  "title": "CodebaseAnalysis",
+  "type": "object"
+}

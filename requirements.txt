@@ -1,0 +1,23 @@
+# ---- Core LLM orchestration ----
+langchain>=0.3.0
+langchain-anthropic>=0.3.0
+langchain-core>=0.3.0
+
+# ---- Configuration & validation ----
+pydantic>=2.7
+pydantic-settings>=2.3
+python-dotenv>=1.0
+PyYAML>=6.0
+
+# ---- CLI & UX ----
+typer>=0.12
+rich>=13.7
+
+# ---- Resilience ----
+tenacity>=8.3
+
+# ---- Deterministic static analysis (language-agnostic complexity metrics) ----
+lizard>=1.17
+
+# ---- Optional: more accurate token counting (heuristic fallback used if absent) ----
+tiktoken>=0.7

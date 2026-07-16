@@ -1,0 +1,523 @@
+{
+  "metadata": {
+    "schema_version": "1.0",
+    "generated_at": "2026-07-16T01:24:00+00:00",
+    "target": "https://github.com/codejsha/spring-rest-sakila",
+    "model": "claude-sonnet-4-20250514",
+    "tool_version": "1.0.0"
+  },
+  "overview": {
+    "name": "spring-rest-sakila",
+    "purpose": "A Spring Boot 3 application that exposes a hypermedia-driven REST API over the Sakila sample database, a DVD-rental domain covering films, actors, customers, inventory, rentals and payments. It demonstrates a production-shaped read/write API with authentication, caching, and generated OpenAPI/Postman documentation.",
+    "architecture_summary": "Package-by-feature (vertical slice) architecture. Each business capability (catalog, rental, customer, payment, location, auth) is a self-contained module holding its own controller, service interface + implementation, Spring Data repository (often extended with a custom QueryDSL/Blaze-Persistence fragment), JPA entity, DTOs, MapStruct mappers, and HATEOAS assemblers. Cross-cutting concerns (security, persistence, Redis, logging) live in a top-level config package.",
+    "primary_language": "Java",
+    "frameworks": [
+      "Spring Boot 3",
+      "Spring Web MVC",
+      "Spring Data JPA (Hibernate)",
+      "Spring HATEOAS",
+      "Spring Security",
+      "Spring Data Redis",
+      "QueryDSL",
+      "Blaze-Persistence",
+      "MapStruct",
+      "Lombok",
+      "Spring REST Docs"
+    ],
+    "key_components": [
+      "catalog — films, actors, categories; the richest module, with filtered/paginated QueryDSL queries",
+      "rental — rent/return DVD workflows over inventory",
+      "customer — customer profiles and details",
+      "payment — payment records and reporting projections",
+      "location — country/city/address/language reference data",
+      "auth — JPA-backed user details, roles, and method-level security",
+      "config — security filter chain, persistence, Redis, logging filters"
+    ],
+    "entry_points": [
+      "REST controllers mounted under context path /api/v1 (e.g. /films, /rentals, /customers, /payments)",
+      "Spring Boot main application class",
+      "Spring Security filter chain in config.SecurityFilterConfig"
+    ],
+    "notable_patterns": [
+      "Layered controller → service → repository → entity flow within each feature slice",
+      "DTO + MapStruct mapping to decouple the API contract from JPA entities",
+      "HATEOAS RepresentationModelAssembler classes to attach hypermedia links",
+      "Custom repository fragments (QueryDSL + Blaze-Persistence) for type-safe dynamic queries",
+      "Declarative caching via @Cacheable/@CachePut/@CacheEvict backed by Redis",
+      "Method-level authorization via @Secured with role constants",
+      "JPA AttributeConverters for enum/domain value objects (FilmRating, Category, UserRole)"
+    ],
+    "potential_risks": [
+      "Complexity concentrates in the custom QueryDSL repository implementations and in entity equals()/hashCode() (FilmEntity.equals has cyclomatic complexity 16) rather than in controllers/services, which stay thin.",
+      "Heavy use of Lombok and generated QueryDSL Q-types means the build must run annotation processing (kapt) before the code is fully analyzable.",
+      "Cache keys are defined per-method; eviction correctness depends on keeping @CacheEvict in sync with write paths."
+    ]
+  },
+  "statistics": {
+    "files_discovered": 188,
+    "files_analyzed": 188,
+    "files_skipped": 0,
+    "files_from_cache": 0,
+    "total_source_lines": 10134,
+    "languages": [
+      { "language": "Java", "file_count": 188, "line_count": 10134 }
+    ],
+    "llm_calls": 189,
+    "prompt_tokens": 337512,
+    "completion_tokens": 94233,
+    "estimated_cost_usd": 2.426,
+    "wall_time_seconds": 98.7
+  },
+  "files": [
+    {
+      "path": "src/main/java/com/example/app/services/catalog/controller/FilmController.java",
+      "language": "Java",
+      "package": "com.example.app.services.catalog.controller",
+      "size_bytes": 5461,
+      "complexity": {
+        "nloc": 101,
+        "function_count": 8,
+        "average_cyclomatic_complexity": 1.38,
+        "max_cyclomatic_complexity": 4,
+        "most_complex_function": "FilmController::getFilmList",
+        "band": "low"
+      },
+      "insight": {
+        "summary": "REST controller exposing CRUD and relationship endpoints for films under /films, returning HATEOAS models and enforcing role-based access.",
+        "role": "REST controller",
+        "key_methods": [
+          {
+            "name": "getFilmList",
+            "signature": "public ResponseEntity<CollectionModel<FilmDto.FilmResponse>> getFilmList(String category, String releaseYear, String rating, Pageable pageable)",
+            "description": "Lists films with optional category/releaseYear/rating filters and pagination, building a FilterOption and returning a hypermedia collection.",
+            "parameters": ["String category", "String releaseYear", "String rating", "Pageable pageable"],
+            "returns": "ResponseEntity<CollectionModel<FilmDto.FilmResponse>> — paginated, link-enriched film list",
+            "visibility": "public"
+          },
+          {
+            "name": "getFilm",
+            "signature": "public ResponseEntity<FilmDto.FilmResponse> getFilm(Integer filmId)",
+            "description": "Fetches a single film by id, mapping to a HATEOAS model or returning 404 when absent.",
+            "parameters": ["Integer filmId"],
+            "returns": "ResponseEntity<FilmDto.FilmResponse> or 404",
+            "visibility": "public"
+          },
+          {
+            "name": "addFilm",
+            "signature": "public ResponseEntity<Void> addFilm(FilmDto.FilmRequest model)",
+            "description": "Creates a film and returns 201 with a Location header pointing at the new resource.",
+            "parameters": ["FilmDto.FilmRequest model"],
+            "returns": "ResponseEntity<Void> (201 Created)",
+            "visibility": "public"
+          },
+          {
+            "name": "updateFilm",
+            "signature": "public ResponseEntity<Void> updateFilm(Integer filmId, FilmDto.FilmRequest model)",
+            "description": "Updates an existing film; restricted to the MANAGE role.",
+            "parameters": ["Integer filmId", "FilmDto.FilmRequest model"],
+            "returns": "ResponseEntity<Void> (200 OK)",
+            "visibility": "public"
+          }
+        ],
+        "external_dependencies": ["Spring Web", "Spring HATEOAS", "Spring Security"],
+        "noteworthy": [
+          "Every endpoint is guarded by @Secured with ROLE_READ / ROLE_MANAGE constants.",
+          "Uses WebMvcLinkBuilder (linkTo/methodOn) to construct self/relation links.",
+          "Delegates all data work to FilmService; controller stays thin."
+        ]
+      },
+      "analyzed_with_chunking": false,
+      "from_cache": false
+    },
+    {
+      "path": "src/main/java/com/example/app/services/catalog/service/FilmServiceImpl.java",
+      "language": "Java",
+      "package": "com.example.app.services.catalog.service",
+      "size_bytes": 4384,
+      "complexity": {
+        "nloc": 102,
+        "function_count": 11,
+        "average_cyclomatic_complexity": 1.36,
+        "max_cyclomatic_complexity": 2,
+        "most_complex_function": "FilmServiceImpl::getFilmList",
+        "band": "low"
+      },
+      "insight": {
+        "summary": "Transactional service implementation for the film catalog; orchestrates repository access, DTO mapping, and Redis-backed caching.",
+        "role": "service implementation",
+        "key_methods": [
+          {
+            "name": "getFilmList",
+            "signature": "public List<FilmDto.Film> getFilmList(FilmDto.FilterOption condition, Pageable pageable)",
+            "description": "Returns a filtered or unfiltered paginated film list, choosing the query path based on whether all filter fields are null.",
+            "parameters": ["FilmDto.FilterOption condition", "Pageable pageable"],
+            "returns": "List<FilmDto.Film>",
+            "visibility": "public"
+          },
+          {
+            "name": "getFilm",
+            "signature": "public Optional<FilmDto.Film> getFilm(Integer filmId)",
+            "description": "Fetches a film by id, throwing ResourceNotFoundException when missing; result cached in 'filmResponseCache' keyed by filmId.",
+            "parameters": ["Integer filmId"],
+            "returns": "Optional<FilmDto.Film>",
+            "visibility": "public"
+          },
+          {
+            "name": "addFilm",
+            "signature": "public FilmDto.Film addFilm(FilmDto.FilmRequest model)",
+            "description": "Persists a new film from the request DTO and returns the created record.",
+            "parameters": ["FilmDto.FilmRequest model"],
+            "returns": "FilmDto.Film",
+            "visibility": "public"
+          }
+        ],
+        "external_dependencies": ["Spring Data JPA", "Spring Cache", "Lombok"],
+        "noteworthy": [
+          "@Transactional(readOnly = true) on query methods; write methods use read/write transactions.",
+          "Declarative caching with @Cacheable/@CachePut/@CacheEvict keeps read and write paths consistent.",
+          "Constructor injection via Lombok @RequiredArgsConstructor."
+        ]
+      },
+      "analyzed_with_chunking": false,
+      "from_cache": false
+    },
+    {
+      "path": "src/main/java/com/example/app/services/catalog/repository/custom/CustomFilmRepositoryImpl.java",
+      "language": "Java",
+      "package": "com.example.app.services.catalog.repository.custom",
+      "size_bytes": 6127,
+      "complexity": {
+        "nloc": 112,
+        "function_count": 8,
+        "average_cyclomatic_complexity": 1.0,
+        "max_cyclomatic_complexity": 1,
+        "most_complex_function": "CustomFilmRepositoryImpl::findAllFilmList",
+        "band": "low"
+      },
+      "insight": {
+        "summary": "Custom repository fragment implementing type-safe dynamic film queries with QueryDSL and Blaze-Persistence, including filtering, joins, and projections.",
+        "role": "repository implementation",
+        "key_methods": [
+          {
+            "name": "findAllFilmList",
+            "signature": "public List<FilmDto.Film> findAllFilmList(Pageable pageable)",
+            "description": "Fetches a paginated list of films via a QueryDSL selectFrom with offset/limit, mapping entities to DTOs.",
+            "parameters": ["Pageable pageable"],
+            "returns": "List<FilmDto.Film>",
+            "visibility": "public"
+          },
+          {
+            "name": "findAllFilmListWithFilter",
+            "signature": "public List<FilmDto.Film> findAllFilmListWithFilter(FilmDto.FilterOption condition, Pageable pageable)",
+            "description": "Builds a dynamic query joining film category and applying null-safe equality filters on category, release year, and rating.",
+            "parameters": ["FilmDto.FilterOption condition", "Pageable pageable"],
+            "returns": "List<FilmDto.Film>",
+            "visibility": "public"
+          }
+        ],
+        "external_dependencies": ["QueryDSL", "Blaze-Persistence", "Spring Data JPA", "MapStruct"],
+        "noteworthy": [
+          "Uses generated Q-types (QFilmEntity, QFilmCategoryEntity) — requires annotation processing before compile.",
+          "Null-safe predicates via a shared ExpressionUtils.filterEquals helper.",
+          "Mixes JPAQueryFactory and BlazeJPAQueryFactory for advanced pagination/CTE support."
+        ]
+      },
+      "analyzed_with_chunking": false,
+      "from_cache": false
+    },
+    {
+      "path": "src/main/java/com/example/app/services/catalog/domain/entity/FilmEntity.java",
+      "language": "Java",
+      "package": "com.example.app.services.catalog.domain.entity",
+      "size_bytes": 6442,
+      "complexity": {
+        "nloc": 150,
+        "function_count": 3,
+        "average_cyclomatic_complexity": 6.0,
+        "max_cyclomatic_complexity": 16,
+        "most_complex_function": "FilmEntity::equals",
+        "band": "high"
+      },
+      "insight": {
+        "summary": "JPA entity mapping the sakila.film table, with validation constraints, enum converters, auditing timestamps, and a hand-written equals/hashCode.",
+        "role": "JPA entity",
+        "key_methods": [
+          {
+            "name": "equals",
+            "signature": "public boolean equals(Object o)",
+            "description": "Field-by-field equality across all mapped columns; the highest-complexity method in the file (CC 16) due to the number of nullable fields compared.",
+            "parameters": ["Object o"],
+            "returns": "boolean",
+            "visibility": "public"
+          },
+          {
+            "name": "update",
+            "signature": "public FilmEntity update(FilmEntity source)",
+            "description": "Implements the Updatable contract to copy mutable fields from another instance for update flows.",
+            "parameters": ["FilmEntity source"],
+            "returns": "FilmEntity",
+            "visibility": "public"
+          }
+        ],
+        "external_dependencies": ["Spring Data JPA", "Hibernate", "Jakarta Validation", "Lombok", "Guava"],
+        "noteworthy": [
+          "Complexity hotspot: FilmEntity.equals has cyclomatic complexity 16 — a candidate for simplification via Objects.equals or a key-based equality.",
+          "Declares explicit table indexes and uses @Convert for FilmRating/SpecialFeature/Language value objects.",
+          "@UpdateTimestamp + @ColumnDefault manage auditing and defaults."
+        ]
+      },
+      "analyzed_with_chunking": false,
+      "from_cache": false
+    },
+    {
+      "path": "src/main/java/com/example/app/services/catalog/domain/mapper/FilmMapper.java",
+      "language": "Java",
+      "package": "com.example.app.services.catalog.domain.mapper",
+      "size_bytes": 982,
+      "complexity": {
+        "nloc": 19,
+        "function_count": 0,
+        "average_cyclomatic_complexity": 0.0,
+        "max_cyclomatic_complexity": 0,
+        "most_complex_function": null,
+        "band": "low"
+      },
+      "insight": {
+        "summary": "MapStruct mapper interface declaring the entity↔DTO conversions for films; the implementation is generated at build time.",
+        "role": "object mapper",
+        "key_methods": [
+          {
+            "name": "mapToDto",
+            "signature": "FilmDto.Film mapToDto(FilmEntity entity)",
+            "description": "Maps a FilmEntity to its API DTO; MapStruct generates the field-copy implementation.",
+            "parameters": ["FilmEntity entity"],
+            "returns": "FilmDto.Film",
+            "visibility": "public"
+          },
+          {
+            "name": "mapToDtoList",
+            "signature": "List<FilmDto.Film> mapToDtoList(List<FilmEntity> entities)",
+            "description": "Batch mapping of film entities to DTOs.",
+            "parameters": ["List<FilmEntity> entities"],
+            "returns": "List<FilmDto.Film>",
+            "visibility": "public"
+          }
+        ],
+        "external_dependencies": ["MapStruct"],
+        "noteworthy": [
+          "Zero cyclomatic complexity because it is an interface — behaviour is in generated code.",
+          "componentModel = \"spring\" so the generated mapper is an injectable bean."
+        ]
+      },
+      "analyzed_with_chunking": false,
+      "from_cache": false
+    },
+    {
+      "path": "src/main/java/com/example/app/services/rental/controller/RentalController.java",
+      "language": "Java",
+      "package": "com.example.app.services.rental.controller",
+      "size_bytes": 3471,
+      "complexity": {
+        "nloc": 71,
+        "function_count": 6,
+        "average_cyclomatic_complexity": 1.33,
+        "max_cyclomatic_complexity": 2,
+        "most_complex_function": "RentalController::rentDvd",
+        "band": "low"
+      },
+      "insight": {
+        "summary": "REST controller for rental operations, exposing DVD rent/return workflows and rental lookups under /rentals.",
+        "role": "REST controller",
+        "key_methods": [
+          {
+            "name": "rentDvd",
+            "signature": "public ResponseEntity<Void> rentDvd(RentalDto.RentalRequest model)",
+            "description": "Initiates a DVD rental for a customer/inventory pair and returns the created rental location.",
+            "parameters": ["RentalDto.RentalRequest model"],
+            "returns": "ResponseEntity<Void> (201 Created)",
+            "visibility": "public"
+          },
+          {
+            "name": "returnDvd",
+            "signature": "public ResponseEntity<Void> returnDvd(Integer rentalId)",
+            "description": "Marks a rental as returned, updating return timestamp state.",
+            "parameters": ["Integer rentalId"],
+            "returns": "ResponseEntity<Void>",
+            "visibility": "public"
+          }
+        ],
+        "external_dependencies": ["Spring Web", "Spring HATEOAS", "Spring Security"],
+        "noteworthy": [
+          "Encapsulates a stateful business workflow (rent/return) behind REST semantics.",
+          "Role-secured like the rest of the API."
+        ]
+      },
+      "analyzed_with_chunking": false,
+      "from_cache": false
+    },
+    {
+      "path": "src/main/java/com/example/app/config/SecurityFilterConfig.java",
+      "language": "Java",
+      "package": "com.example.app.config",
+      "size_bytes": 1395,
+      "complexity": {
+        "nloc": 28,
+        "function_count": 1,
+        "average_cyclomatic_complexity": 1.0,
+        "max_cyclomatic_complexity": 1,
+        "most_complex_function": "SecurityFilterConfig::filterChain",
+        "band": "low"
+      },
+      "insight": {
+        "summary": "Spring Security configuration defining the HTTP security filter chain, authentication entry points, and authorization rules for the API.",
+        "role": "configuration",
+        "key_methods": [
+          {
+            "name": "filterChain",
+            "signature": "public SecurityFilterChain filterChain(HttpSecurity http)",
+            "description": "Builds the security filter chain: authorization rules, session policy, and authentication mechanism for the REST API.",
+            "parameters": ["HttpSecurity http"],
+            "returns": "SecurityFilterChain",
+            "visibility": "public"
+          }
+        ],
+        "external_dependencies": ["Spring Security"],
+        "noteworthy": [
+          "Central place where method-level @Secured roles are backed by an HTTP security policy.",
+          "@Configuration bean wired into the Spring Security infrastructure."
+        ]
+      },
+      "analyzed_with_chunking": false,
+      "from_cache": false
+    },
+    {
+      "path": "src/main/java/com/example/app/services/auth/service/JpaUserDetailsService.java",
+      "language": "Java",
+      "package": "com.example.app.services.auth.service",
+      "size_bytes": 1586,
+      "complexity": {
+        "nloc": 34,
+        "function_count": 2,
+        "average_cyclomatic_complexity": 1.5,
+        "max_cyclomatic_complexity": 2,
+        "most_complex_function": "JpaUserDetailsService::findUser",
+        "band": "low"
+      },
+      "insight": {
+        "summary": "Spring Security UserDetailsService backed by JPA, loading users and their authorities from the database for authentication.",
+        "role": "service implementation",
+        "key_methods": [
+          {
+            "name": "loadUserByUsername",
+            "signature": "public UserDetails loadUserByUsername(String username)",
+            "description": "Loads a user and granted authorities by username, throwing UsernameNotFoundException when absent.",
+            "parameters": ["String username"],
+            "returns": "UserDetails",
+            "visibility": "public"
+          },
+          {
+            "name": "findUser",
+            "signature": "private UserDetails findUser(String username)",
+            "description": "Helper that resolves the user entity and maps roles to Spring Security authorities.",
+            "parameters": ["String username"],
+            "returns": "UserDetails",
+            "visibility": "private"
+          }
+        ],
+        "external_dependencies": ["Spring Security", "Spring Data JPA"],
+        "noteworthy": [
+          "Bridges the JPA AuthorityEntity/UserRole model to Spring Security's UserDetails contract.",
+          "Foundation for the method-level @Secured authorization used across controllers."
+        ]
+      },
+      "analyzed_with_chunking": false,
+      "from_cache": false
+    },
+    {
+      "path": "src/main/java/com/example/app/services/catalog/assembler/ActorRepresentationModelAssembler.java",
+      "language": "Java",
+      "package": "com.example.app.services.catalog.assembler",
+      "size_bytes": 2867,
+      "complexity": {
+        "nloc": 47,
+        "function_count": 3,
+        "average_cyclomatic_complexity": 1.0,
+        "max_cyclomatic_complexity": 1,
+        "most_complex_function": "ActorRepresentationModelAssembler::ActorRepresentationModelAssembler",
+        "band": "low"
+      },
+      "insight": {
+        "summary": "HATEOAS assembler that converts Actor DTOs into RepresentationModels enriched with self and relation hypermedia links.",
+        "role": "HATEOAS representation assembler",
+        "key_methods": [
+          {
+            "name": "toModel",
+            "signature": "public ActorDto.ActorResponse toModel(ActorDto.Actor entity)",
+            "description": "Wraps an actor DTO with self and related links (e.g. the actor's films).",
+            "parameters": ["ActorDto.Actor entity"],
+            "returns": "ActorDto.ActorResponse (with links)",
+            "visibility": "public"
+          },
+          {
+            "name": "toCollectionModel",
+            "signature": "public CollectionModel<ActorDto.ActorResponse> toCollectionModel(Iterable<? extends ActorDto.Actor> entities)",
+            "description": "Assembles a hypermedia collection of actors with collection-level links.",
+            "parameters": ["Iterable<? extends ActorDto.Actor> entities"],
+            "returns": "CollectionModel<ActorDto.ActorResponse>",
+            "visibility": "public"
+          }
+        ],
+        "external_dependencies": ["Spring HATEOAS"],
+        "noteworthy": [
+          "Keeps hypermedia link logic out of controllers and services.",
+          "Extends RepresentationModelAssemblerSupport for consistent link building."
+        ]
+      },
+      "analyzed_with_chunking": false,
+      "from_cache": false
+    },
+    {
+      "path": "src/main/java/com/example/app/services/payment/service/PaymentServiceImpl.java",
+      "language": "Java",
+      "package": "com.example.app.services.payment.service",
+      "size_bytes": 3522,
+      "complexity": {
+        "nloc": 77,
+        "function_count": 7,
+        "average_cyclomatic_complexity": 1.14,
+        "max_cyclomatic_complexity": 2,
+        "most_complex_function": "PaymentServiceImpl::getPaymentDetails",
+        "band": "low"
+      },
+      "insight": {
+        "summary": "Transactional service for payment records, providing lookups, detail projections, and aggregation used by reporting endpoints.",
+        "role": "service implementation",
+        "key_methods": [
+          {
+            "name": "getPaymentDetails",
+            "signature": "public Optional<PaymentDto.PaymentDetails> getPaymentDetails(Integer paymentId)",
+            "description": "Retrieves a detailed payment view (joining customer/staff/rental) or empty when not found.",
+            "parameters": ["Integer paymentId"],
+            "returns": "Optional<PaymentDto.PaymentDetails>",
+            "visibility": "public"
+          },
+          {
+            "name": "getPaymentList",
+            "signature": "public List<PaymentDto.Payment> getPaymentList(Pageable pageable)",
+            "description": "Returns a paginated list of payments mapped to DTOs.",
+            "parameters": ["Pageable pageable"],
+            "returns": "List<PaymentDto.Payment>",
+            "visibility": "public"
+          }
+        ],
+        "external_dependencies": ["Spring Data JPA", "QueryDSL", "MapStruct"],
+        "noteworthy": [
+          "Read-mostly service leaning on custom projections for reporting.",
+          "Consistent with the catalog/rental service pattern (thin controller, mapping in service/repo)."
+        ]
+      },
+      "analyzed_with_chunking": false,
+      "from_cache": false
+    }
+  ]
+}
