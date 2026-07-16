@@ -118,6 +118,23 @@ flowchart TB
 See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for the component-by-component breakdown,
 runtime data flow, and cross-cutting concerns.
 
+### How the data flows
+
+The **map** step turns each source file into one self-contained record; the **reduce** step
+synthesizes all of those records into a single project overview.
+
+![Map produces one record per file — 188 islands of fact — then reduce synthesizes the overview](docs/visuals/islands.png)
+
+Anatomy of one record: the LLM writes the semantic `insight` (green); everything else — path,
+package, and the `complexity` metrics — is computed locally by a static analyzer, no LLM (blue).
+
+![Anatomy of one record: green is LLM-generated insight, blue is computed locally](docs/visuals/one_record.png)
+
+The finished `analysis.json` is two layers in one document — the synthesized `overview` on top,
+the 188 per-file records underneath as the detail layer, plus provenance and run statistics.
+
+![The finished analysis.json: overview, statistics, and the 188 file records](docs/visuals/after_reduce.png)
+
 ---
 
 ## 2. Quick start
